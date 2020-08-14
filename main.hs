@@ -44,6 +44,7 @@ data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
              | Number Integer
+             | Float Float
              | String String
              | Bool Bool
              | PrimitiveFunc ([LispVal] -> ThrowsError LispVal)
@@ -84,6 +85,14 @@ parseAtom = do
 parseNumber :: Parser LispVal
 parseNumber = liftM (Number . read) $ many1 digit
 
+parseFloat :: Parser LispVal
+parseFloat = do
+    x <- many1 digit
+    char '.'
+    y <- many1 digit
+    let atom = (x ++ "." ++ y)
+    return $ Float $ read atom
+
 parseList :: Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
 
@@ -102,6 +111,7 @@ parseQuoted = do
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
          <|> parseString
+         <|> try parseFloat
          <|> parseNumber
          <|> parseQuoted
          <|> do char '('
@@ -114,10 +124,11 @@ showVal :: LispVal -> String
 showVal (String contents) = "\"" ++ contents ++ "\""
 showVal (Atom name) = name
 showVal (Number contents) = show contents
+showVal (Float contents) = show contents
 showVal (Bool True) = "True"
 showVal (Bool False) = "False"
 showVal (List contents) = "(" ++ unwordsList contents ++ ")"
-showVal (DottedList head tail) = "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
+showVal (DottedList head tail) = "(" ++ unwordsList head ++ ") " ++ showVal tail
 showVal (PrimitiveFunc _) = "<primitive>"
 showVal (Func {params = args, vararg = varargs, body = body, closure = env}) = 
    "(lambda (" ++ unwords (map show args) ++
@@ -195,6 +206,7 @@ makeVarArgs = makeFunc . Just . showVal
 eval :: Env -> LispVal -> IOThrowsError LispVal
 eval env val@(String _) = return val
 eval env val@(Number _) = return val
+eval env val@(Float _) = return val
 eval env val@(Bool _) = return val
 eval env (Atom id) = getVar env id
 eval env (List [Atom "load", String filename]) = 
