@@ -1,1 +1,1 @@
-ghc --make main.hs && if [ "$1" ]; then rlwrap ./main "$1"; else rlwrap ./main; fi
+ghc --make main.hs -o myhaskell && if [ "$1" ]; then rlwrap ./myhaskell "$1"; else rlwrap ./myhaskell; fi
